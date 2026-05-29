@@ -22,7 +22,7 @@ public:
         
         for (int i = 0; i < size; i++) {
             if (set[i] == name) {
-                cout << "Error: " << name << " already exists in the set." << endl;
+                cout << "Error: " << name << " already exists in the set." << "\n";
                 return;
             }
         }
@@ -45,9 +45,6 @@ public:
                 set[i] = set[i + 1];
             }
             size--;
-            cout << name << " has been removed from the set." << endl;
-        } else {
-            cout << "Error: " << name << " not found in the set." << endl;
         }
     }
 
@@ -62,18 +59,18 @@ public:
 
     void print() {
         if (size == 0) {
-            cout << "The set is empty." << endl;
+            cout << "The set is empty." << "\n";
             return;
         }
         
-        cout << "Set contents: { ";
+        cout << "Set: { ";
         for (int i = 0; i < size; i++) {
             cout << set[i];
             if (i < size - 1) {
-                cout << ", ";
+                cout << " ";
             }
         }
-        cout << " }" << endl;
+        cout << " }" << "\n";
     }
 };
 
