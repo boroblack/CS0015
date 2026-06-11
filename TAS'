@@ -1,1 +1,156 @@
-tas
+#include <iostream>
+using namespace std;
+
+// Node structure for linked list
+struct Node {
+    int data;
+    Node* next;
+    
+    Node(int value) {
+        data = value;
+        next = nullptr;
+    }
+};
+
+class Queue {
+private:
+    Node* front;  // Points to the first node (front of queue)
+    Node* rear;   // Points to the last node (rear of queue)
+    int size;     // Current number of elements
+
+public:
+    // Constructor
+    Queue() {
+        front = nullptr;
+        rear = nullptr;
+        size = 0;
+    }
+
+    // Destructor - free all nodes
+    ~Queue() {
+        while (!isEmpty()) {
+            dequeue();
+        }
+    }
+
+    // Check if queue is empty
+    bool isEmpty() {
+        return front == nullptr;
+    }
+
+    // Check if queue is full (never full for linked list - depends on heap memory)
+    bool isFull() {
+        Node* testNode = new (nothrow) Node(0);
+        if (testNode == nullptr) {
+            return true;  // Memory allocation failed
+        }
+        delete testNode;
+        return false;  // Memory available
+    }
+
+    // Add element to the rear of queue
+    void enqueue(int x) {
+        Node* newNode = new Node(x);
+        
+        if (isEmpty()) {
+            // First element - both front and rear point to it
+            front = rear = newNode;
+        } else {
+            // Add to the end and update rear
+            rear->next = newNode;
+            rear = newNode;
+        }
+        size++;
+        cout << "Enqueued: " << x << endl;
+    }
+
+    // Remove element from the front of queue
+    int dequeue() {
+        if (isEmpty()) {
+            cout << "Error: Queue is empty!" << endl;
+            return -1;
+        }
+        
+        Node* temp = front;
+        int x = front->data;
+        
+        // Move front to next node
+        front = front->next;
+        
+        // If queue becomes empty, update rear to nullptr
+        if (front == nullptr) {
+            rear = nullptr;
+        }
+        
+        delete temp;
+        size--;
+        cout << "Dequeued: " << x << endl;
+        return x;
+    }
+
+    // Get the front element without removing
+    int getFront() {
+        if (isEmpty()) {
+            cout << "Queue is empty! No front element." << endl;
+            return -1;
+        }
+        return front->data;
+    }
+
+    // Get the rear element
+    int getRear() {
+        if (isEmpty()) {
+            cout << "Queue is empty! No rear element." << endl;
+            return -1;
+        }
+        return rear->data;
+    }
+
+    // Get current size
+    int getSize() {
+        return size;
+    }
+
+    // Display all elements
+    void displayQueue() {
+        if (isEmpty()) {
+            cout << "Queue is empty!" << endl;
+            return;
+        }
+        
+        cout << "Queue elements (front to rear): ";
+        Node* temp = front;
+        while (temp != nullptr) {
+            cout << temp->data;
+            if (temp->next != nullptr) {
+                cout << " <- ";
+            }
+            temp = temp->next;
+        }
+        cout << endl;
+    }
+};
+
+int main() {
+    Queue q;
+    
+    q.enqueue(5);
+    q.enqueue(10);
+    q.enqueue(15);
+    q.enqueue(20);
+    
+    q.displayQueue();
+    cout << "Front element: " << q.getFront() << endl;
+    cout << "Rear element: " << q.getRear() << endl;
+    cout << "Queue size: " << q.getSize() << endl;
+    
+    q.dequeue();
+    q.dequeue();
+    
+    q.displayQueue();
+    cout << "Front element: " << q.getFront() << endl;
+    cout << "Rear element: " << q.getRear() << endl;
+    cout << "Queue size: " << q.getSize() << endl;
+    
+    return 0;
+}
