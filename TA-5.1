@@ -15,15 +15,11 @@ class Queue {
     }
 
     bool isEmpty() {
-      // Returns true if queue is empty, false otherwise
       return size == 0;
-      // Alternative: return front == -1;
     }
 
     bool isFull() {
-      // Returns true if queue is full, false otherwise
       return size == MAX_SIZE;
-      // Alternative: return rear == MAX_SIZE - 1;
     }
 
     void enqueue(int x) {
