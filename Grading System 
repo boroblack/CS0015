@@ -1,0 +1,460 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX_STUDENTS 100
+#define NAME_LEN 100
+#define ID_LEN 20
+#define SECTION_LEN 10
+
+// Structure for Lecture Grades
+typedef struct {
+    int sa1, sa2, sa3, sa4;      // Summative Assessments (60 pts each)
+    int mp;                       // Midterm Project (100 pts)
+    int fp;                       // Final Project (100 pts)
+    int me;                       // Midterm Exam (100 pts)
+    int fe;                       // Final Exam (100 pts)
+    float mlec;                   // Midterm Lecture Grade
+    float flec;                   // Final Lecture Grade
+} LectureGrades;
+
+// Structure for Laboratory Grades
+typedef struct {
+    int ta1, ta2, ta3, ta4, ta5, ta6, ta7, ta8;  // Technical Assessments (100 pts each)
+    int me;                       // Midterm Lab Exam (100 pts)
+    int fe;                       // Final Lab Exam (100 pts)
+    float mlab;                   // Midterm Lab Grade
+    float flab;                   // Final Lab Grade
+} LaboratoryGrades;
+
+// Structure for Student
+typedef struct {
+    char name[NAME_LEN];
+    char id[ID_LEN];
+    char section[SECTION_LEN];
+    LectureGrades lecture;
+    LaboratoryGrades lab;
+    int hasLecture;
+    int hasLab;
+} Student;
+
+Student students[MAX_STUDENTS];
+int studentCount = 0;
+
+// Function prototypes
+void saveToFile();
+void loadFromFile();
+void inputLectureData();
+void inputLaboratoryData();
+void getStudentGrade();
+void displayAllStudents();
+void displayLectureGrades();
+void displayLaboratoryGrades();
+float computeMidtermLecture(LectureGrades l);
+float computeFinalLecture(LectureGrades l);
+float computeMidtermLab(LaboratoryGrades lab);
+float computeFinalLab(LaboratoryGrades lab);
+float computeCourseGrade(float mlec, float mlab, int isMidterm);
+char* getEquivalentGrade(float grade);
+char* getRemarks(float grade);
+int findStudentIndex(char name[], char id[]);
+void clearInputBuffer();
+
+int main() {
+    int choice;
+    char confirm;
+    
+    loadFromFile(); // Load existing data from file
+    
+    do {
+        printf("\nCCS0007/CCS0007L Course Grading Computation Menu\n");
+        printf("==============================================\n");
+        printf("1 - Input Lecture Data\n");
+        printf("2 - Input Laboratory Data\n");
+        printf("3 - Get Student Lecture, Laboratory, and Course Grade\n");
+        printf("4 - Get Number of Students Listed\n");
+        printf("5 - Get Posted Lecture Grades of Listed Students\n");
+        printf("6 - Get Posted Laboratory Grades of Listed Students\n");
+        printf("7 - Exit\n");
+        printf("Choose Option: ");
+        scanf("%d", &choice);
+        clearInputBuffer();
+        
+        switch(choice) {
+            case 1:
+                inputLectureData();
+                break;
+            case 2:
+                inputLaboratoryData();
+                break;
+            case 3:
+                getStudentGrade();
+                break;
+            case 4:
+                displayAllStudents();
+                break;
+            case 5:
+                displayLectureGrades();
+                break;
+            case 6:
+                displayLaboratoryGrades();
+                break;
+            case 7:
+                printf("Are you sure to exit? (Y or N): ");
+                scanf("%c", &confirm);
+                if(toupper(confirm) == 'Y') {
+                    saveToFile();
+                    printf("Exiting program...\n");
+                    return 0;
+                }
+                break;
+            default:
+                printf("Invalid option! Please try again.\n");
+        }
+    } while(1);
+    
+    return 0;
+}
+
+void clearInputBuffer() {
+    while(getchar() != '\n');
+}
+
+void saveToFile() {
+    FILE *file = fopen("student_data.dat", "wb");
+    if(file == NULL) {
+        printf("Error opening file for writing!\n");
+        return;
+    }
+    fwrite(&studentCount, sizeof(int), 1, file);
+    fwrite(students, sizeof(Student), studentCount, file);
+    fclose(file);
+    printf("Data saved successfully!\n");
+}
+
+void loadFromFile() {
+    FILE *file = fopen("student_data.dat", "rb");
+    if(file == NULL) {
+        studentCount = 0;
+        return;
+    }
+    fread(&studentCount, sizeof(int), 1, file);
+    fread(students, sizeof(Student), studentCount, file);
+    fclose(file);
+}
+
+float computeMidtermLecture(LectureGrades l) {
+    float sumSA = (l.sa1 + l.sa2 + l.sa3 + l.sa4) / 4.0; // Average of 4 SAs
+    float total = (sumSA * 0.3) + (l.mp * 0.3) + (l.me * 0.4);
+    return total;
+}
+
+float computeFinalLecture(LectureGrades l) {
+    float sumSA = (l.sa1 + l.sa2 + l.sa3 + l.sa4) / 4.0;
+    float total = (sumSA * 0.2) + (l.fp * 0.4) + (l.fe * 0.4);
+    return total;
+}
+
+float computeMidtermLab(LaboratoryGrades lab) {
+    float sumTA = (lab.ta1 + lab.ta2 + lab.ta3 + lab.ta4 + lab.ta5 + lab.ta6 + lab.ta7 + lab.ta8) / 8.0;
+    float total = (sumTA * 0.6) + (lab.me * 0.4);
+    return total;
+}
+
+float computeFinalLab(LaboratoryGrades lab) {
+    float sumTA = (lab.ta1 + lab.ta2 + lab.ta3 + lab.ta4 + lab.ta5 + lab.ta6 + lab.ta7 + lab.ta8) / 8.0;
+    float total = (sumTA * 0.6) + (lab.fe * 0.4);
+    return total;
+}
+
+float computeCourseGrade(float mlec, float mlab, int isMidterm) {
+    if(isMidterm) {
+        return (mlec * 0.6) + (mlab * 0.4);
+    } else {
+        return (mlec * 0.6) + (mlab * 0.4);
+    }
+}
+
+char* getEquivalentGrade(float grade) {
+    if(grade >= 96) return "1.0";
+    else if(grade >= 92) return "1.25";
+    else if(grade >= 88) return "1.5";
+    else if(grade >= 84) return "1.75";
+    else if(grade >= 80) return "2.0";
+    else if(grade >= 75) return "2.25";
+    else if(grade >= 70) return "2.5";
+    else if(grade >= 65) return "2.75";
+    else if(grade >= 60) return "3.0";
+    else return "5.0";
+}
+
+char* getRemarks(float grade) {
+    if(grade >= 75) return "Passed";
+    else return "Failed";
+}
+
+int findStudentIndex(char name[], char id[]) {
+    for(int i = 0; i < studentCount; i++) {
+        if(strcmp(students[i].name, name) == 0 && strcmp(students[i].id, id) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void inputLectureData() {
+    char name[NAME_LEN], id[ID_LEN];
+    int index;
+    
+    printf("\nPlease input CCS0007 Lecture Grades.\n");
+    printf("Student Name (SN, FM MI): ");
+    fgets(name, NAME_LEN, stdin);
+    name[strcspn(name, "\n")] = 0;
+    
+    printf("Student ID Number: ");
+    fgets(id, ID_LEN, stdin);
+    id[strcspn(id, "\n")] = 0;
+    
+    index = findStudentIndex(name, id);
+    if(index == -1) {
+        index = studentCount;
+        strcpy(students[index].name, name);
+        strcpy(students[index].id, id);
+        students[index].hasLecture = 0;
+        students[index].hasLab = 0;
+        studentCount++;
+    }
+    
+    printf("Section: ");
+    fgets(students[index].section, SECTION_LEN, stdin);
+    students[index].section[strcspn(students[index].section, "\n")] = 0;
+    
+    printf("Summative Assessment1 Points: 60\n");
+    printf("Summative Assessment1 Score: ");
+    scanf("%d", &students[index].lecture.sa1);
+    
+    printf("Summative Assessment2 Points: 60\n");
+    printf("Summative Assessment2 Score: ");
+    scanf("%d", &students[index].lecture.sa2);
+    
+    printf("Summative Assessment3 Points: 60\n");
+    printf("Summative Assessment3 Score: ");
+    scanf("%d", &students[index].lecture.sa3);
+    
+    printf("Summative Assessment4 Points: 60\n");
+    printf("Summative Assessment4 Score: ");
+    scanf("%d", &students[index].lecture.sa4);
+    
+    printf("Midterm Project Points: 100\n");
+    printf("Midterm Project Score: ");
+    scanf("%d", &students[index].lecture.mp);
+    
+    printf("Midterm Exam Points: 100\n");
+    printf("Midterm Exam Score: ");
+    scanf("%d", &students[index].lecture.me);
+    
+    printf("Final Project Points: 100\n");
+    printf("Final Project Score: ");
+    scanf("%d", &students[index].lecture.fp);
+    
+    printf("Final Exam Points: 100\n");
+    printf("Final Exam Score: ");
+    scanf("%d", &students[index].lecture.fe);
+    
+    students[index].lecture.mlec = computeMidtermLecture(students[index].lecture);
+    students[index].lecture.flec = computeFinalLecture(students[index].lecture);
+    students[index].hasLecture = 1;
+    
+    clearInputBuffer();
+    printf("Lecture data input complete!\n");
+}
+
+void inputLaboratoryData() {
+    char name[NAME_LEN], id[ID_LEN];
+    int index;
+    
+    printf("\nPlease input CCS0007L Laboratory Grades.\n");
+    printf("Student Name (SN, FM MI): ");
+    fgets(name, NAME_LEN, stdin);
+    name[strcspn(name, "\n")] = 0;
+    
+    printf("Student ID Number: ");
+    fgets(id, ID_LEN, stdin);
+    id[strcspn(id, "\n")] = 0;
+    
+    index = findStudentIndex(name, id);
+    if(index == -1) {
+        index = studentCount;
+        strcpy(students[index].name, name);
+        strcpy(students[index].id, id);
+        students[index].hasLecture = 0;
+        students[index].hasLab = 0;
+        studentCount++;
+    }
+    
+    printf("Section: ");
+    fgets(students[index].section, SECTION_LEN, stdin);
+    students[index].section[strcspn(students[index].section, "\n")] = 0;
+    
+    printf("Technical Assessment1 Points: 100\n");
+    printf("Technical Assessment1 Score: ");
+    scanf("%d", &students[index].lab.ta1);
+    
+    printf("Technical Assessment2 Points: 100\n");
+    printf("Technical Assessment2 Score: ");
+    scanf("%d", &students[index].lab.ta2);
+    
+    printf("Technical Assessment3 Points: 100\n");
+    printf("Technical Assessment3 Score: ");
+    scanf("%d", &students[index].lab.ta3);
+    
+    printf("Technical Assessment4 Points: 100\n");
+    printf("Technical Assessment4 Score: ");
+    scanf("%d", &students[index].lab.ta4);
+    
+    printf("Technical Assessment5 Points: 100\n");
+    printf("Technical Assessment5 Score: ");
+    scanf("%d", &students[index].lab.ta5);
+    
+    printf("Technical Assessment6 Points: 100\n");
+    printf("Technical Assessment6 Score: ");
+    scanf("%d", &students[index].lab.ta6);
+    
+    printf("Technical Assessment7 Points: 100\n");
+    printf("Technical Assessment7 Score: ");
+    scanf("%d", &students[index].lab.ta7);
+    
+    printf("Technical Assessment8 Points: 100\n");
+    printf("Technical Assessment8 Score: ");
+    scanf("%d", &students[index].lab.ta8);
+    
+    printf("Midterm Lab Exam Points: 100\n");
+    printf("Midterm Lab Exam Score: ");
+    scanf("%d", &students[index].lab.me);
+    
+    printf("Final Lab Exam Points: 100\n");
+    printf("Final Lab Exam Score: ");
+    scanf("%d", &students[index].lab.fe);
+    
+    students[index].lab.mlab = computeMidtermLab(students[index].lab);
+    students[index].lab.flab = computeFinalLab(students[index].lab);
+    students[index].hasLab = 1;
+    
+    clearInputBuffer();
+    printf("Laboratory data input complete!\n");
+}
+
+void getStudentGrade() {
+    char name[NAME_LEN], id[ID_LEN];
+    int index;
+    float mcg, fcg;
+    
+    printf("\nPlease input name and ID.\n");
+    printf("Student Name (SN, FM MI): ");
+    fgets(name, NAME_LEN, stdin);
+    name[strcspn(name, "\n")] = 0;
+    
+    printf("Student ID Number: ");
+    fgets(id, ID_LEN, stdin);
+    id[strcspn(id, "\n")] = 0;
+    
+    index = findStudentIndex(name, id);
+    
+    if(index == -1 || students[index].hasLecture == 0 || students[index].hasLab == 0) {
+        printf("Student data not found or incomplete!\n");
+        return;
+    }
+    
+    printf("\nStudent Name: %s\n", students[index].name);
+    printf("Student ID Number: %s\n", students[index].id);
+    printf("Course: CCS0007/CCS0007L\n");
+    printf("Section: %s\n", students[index].section);
+    
+    // Lecture Grade Display
+    printf("\nLecture Grade\n");
+    printf("SA1 SA2 SA3 SA4 MP FP ME FE MLEC FLEC\n");
+    printf("==== ==== ==== ==== ==== ==== ==== ==== ===== =====\n");
+    printf("%-4d %-4d %-4d %-4d %-4d %-4d %-4d %-4d %-6.2f %-6.2f\n",
+           students[index].lecture.sa1, students[index].lecture.sa2,
+           students[index].lecture.sa3, students[index].lecture.sa4,
+           students[index].lecture.mp, students[index].lecture.fp,
+           students[index].lecture.me, students[index].lecture.fe,
+           students[index].lecture.mlec, students[index].lecture.flec);
+    
+    // Laboratory Grade Display
+    printf("\nLaboratory Grade\n");
+    printf("TA1 TA2 TA3 TA4 TA5 TA6 TA7 TA8 ME FE MLAB FLAB\n");
+    printf("==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ===== =====\n");
+    printf("%-4d %-4d %-4d %-4d %-4d %-4d %-4d %-4d %-4d %-4d %-6.2f %-6.2f\n",
+           students[index].lab.ta1, students[index].lab.ta2,
+           students[index].lab.ta3, students[index].lab.ta4,
+           students[index].lab.ta5, students[index].lab.ta6,
+           students[index].lab.ta7, students[index].lab.ta8,
+           students[index].lab.me, students[index].lab.fe,
+           students[index].lab.mlab, students[index].lab.flab);
+    
+    // Course Grade Computation
+    mcg = computeCourseGrade(students[index].lecture.mlec, students[index].lab.mlab, 1);
+    fcg = computeCourseGrade(students[index].lecture.flec, students[index].lab.flab, 0);
+    float avgGrade = (mcg + fcg) / 2;
+    
+    printf("\nCourse Grade\n");
+    printf("MCG    FCG    EQV    REMARKS\n");
+    printf("===== ===== ===== =========\n");
+    printf("%-6.2f %-6.2f %-6s %s\n", mcg, fcg, getEquivalentGrade(avgGrade), getRemarks(avgGrade));
+}
+
+void displayAllStudents() {
+    printf("\nTotal Number of Student Listed: %d\n", studentCount);
+    printf("Course: CCS0007/CCS0007L\n");
+    if(studentCount > 0) {
+        printf("Section: %s\n", students[0].section);
+    }
+    printf("No. Student Name (SN, FN MI) Student ID No.\n");
+    printf("=== =========================== ==============\n");
+    for(int i = 0; i < studentCount; i++) {
+        printf("%-3d %-27s %s\n", i+1, students[i].name, students[i].id);
+    }
+}
+
+void displayLectureGrades() {
+    printf("\nLecture Grades of Listed Students\n");
+    printf("Course: CCS0007\n");
+    if(studentCount > 0) {
+        printf("Section: %s\n", students[0].section);
+    }
+    printf("No. Student Name (SN, FN MI) Student ID No. SA1 SA2 SA3 SA4 MP FP ME FE\n");
+    printf("=== =========================== ============== ==== ==== ==== ==== ==== ==== ==== ====\n");
+    for(int i = 0; i < studentCount; i++) {
+        if(students[i].hasLecture) {
+            printf("%-3d %-27s %-14s %-4d %-4d %-4d %-4d %-4d %-4d %-4d %-4d\n",
+                   i+1, students[i].name, students[i].id,
+                   students[i].lecture.sa1, students[i].lecture.sa2,
+                   students[i].lecture.sa3, students[i].lecture.sa4,
+                   students[i].lecture.mp, students[i].lecture.fp,
+                   students[i].lecture.me, students[i].lecture.fe);
+        }
+    }
+}
+
+void displayLaboratoryGrades() {
+    printf("\nLaboratory Grades of Listed Students\n");
+    printf("Course: CCS0007L\n");
+    if(studentCount > 0) {
+        printf("Section: %s\n", students[0].section);
+    }
+    printf("No. Student Name (SN, FN MI) Student ID No. TA1 TA2 TA3 TA4 TA5 TA6 TA7 TA8 ME FE\n");
+    printf("=== ====================== ============== ==== ==== ==== ==== ==== ==== ==== ==== ==== ====\n");
+    for(int i = 0; i < studentCount; i++) {
+        if(students[i].hasLab) {
+            printf("%-3d %-22s %-14s %-4d %-4d %-4d %-4d %-4d %-4d %-4d %-4d %-4d %-4d\n",
+                   i+1, students[i].name, students[i].id,
+                   students[i].lab.ta1, students[i].lab.ta2,
+                   students[i].lab.ta3, students[i].lab.ta4,
+                   students[i].lab.ta5, students[i].lab.ta6,
+                   students[i].lab.ta7, students[i].lab.ta8,
+                   students[i].lab.me, students[i].lab.fe);
+        }
+    }
+}
